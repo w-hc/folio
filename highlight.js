@@ -4,7 +4,7 @@ const { createHighlighter } = require('shiki');
 // We preload languages at startup so highlightCode can be called synchronously.
 const PRELOADED_LANGS = [
   'python', 'javascript', 'c', 'cpp', 'bash', 'rust',
-  'json', 'yaml', 'sql', 'text',
+  'json', 'yaml', 'toml', 'sql', 'text',
 ];
 
 let highlighter;
@@ -32,6 +32,7 @@ const EXT_TO_LANG = {
   '.zsh': 'bash',
   '.json': 'json',
   '.yaml': 'yaml',
+  '.toml': 'toml',
   '.yml': 'yaml',
   '.sql': 'sql',
 };
