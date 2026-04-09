@@ -1,9 +1,9 @@
 {
-  "name": "noteserve",
+  "name": "folio",
   "version": "1.0.0",
-  "description": "Portable file browser that renders Markdown with KaTeX math support",
+  "description": "A mobile-friendly file browser with Markdown rendering",
   "bin": {
-    "noteserve": "./server.js"
+    "folio": "./server.js"
   },
   "dependencies": {
     "@traptitech/markdown-it-katex": "^3.6.0",
