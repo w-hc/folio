@@ -4,7 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { parseArgs } = require('util');
-const { renderMarkdown, markdownPage } = require('./markdown');
+const { renderMarkdown, markdownPage } = require('./markdown-it-renderer');
 const { initHighlighter, highlightCode, langFromExt } = require('./highlight');
 const { html, raw, configure, page, breadcrumb, formatSize, UI_COLOR } = require('./html-engine');
 

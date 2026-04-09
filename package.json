@@ -6,9 +6,10 @@
     "noteserve": "./server.js"
   },
   "dependencies": {
+    "@traptitech/markdown-it-katex": "^3.6.0",
     "katex": "^0.16.11",
-    "marked": "^15.0.0",
-    "marked-gfm-heading-id": "^4.1.4",
+    "markdown-it": "^14.1.1",
+    "markdown-it-anchor": "^9.2.0",
     "shiki": "^4.0.2"
   }
 }
