@@ -3,6 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { initHighlighter, renderMarkdown } = require('./markdown');
 
 // --- CLI args ---
 const args = process.argv.slice(2);
@@ -16,7 +17,10 @@ for (let i = 0; i < args.length; i++) {
     FS_ROOT = args[i];
   }
 }
-FS_ROOT = path.resolve(FS_ROOT);
+// Use realpath so the root matches what realpath returns for children.
+// On macOS, /tmp → /private/tmp, so without this the security check would
+// reject every file under /tmp.
+FS_ROOT = fs.realpathSync(path.resolve(FS_ROOT));
 
 // --- Constants ---
 const MAX_TEXT_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -130,17 +134,24 @@ code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monosp
   border-radius: 6px; font-size: 16px;
 }
 .download-box a:hover { background: #0250a3; }
-.file-size { color: #586069; font-size: 14px; margin-left: 8px; }`;
+.file-size { color: #586069; font-size: 14px; margin-left: 8px; }
+.katex-display { overflow-x: auto; overflow-y: hidden; }
+table { border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background: #f6f8fa; }`;
 
 // page() returns a plain string (via [RAW]) since it's the outermost call —
 // the HTTP response needs a string, not a raw-wrapped object.
-function page(title, body) {
+// extraHead is optional — used by serveMarkdown to include KaTeX CSS
+// only on pages that need it.
+function page(title, body, extraHead = raw('')) {
   return html`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
+  ${extraHead}
   <style>${raw(CSS)}</style>
 </head>
 <body>
@@ -219,6 +230,23 @@ async function serveDirectory(req, res, fsPath, urlPath) {
   `));
 }
 
+// Shiki inlines its own styles, so only KaTeX CSS is needed from CDN.
+const MARKDOWN_HEAD = html`
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">`;
+
+async function serveMarkdown(req, res, fsPath, urlPath) {
+  const content = await fs.promises.readFile(fsPath, 'utf-8');
+  const name = path.basename(fsPath);
+  const rendered = renderMarkdown(content);
+  sendHtml(
+    res, page(
+      name,
+      html`${breadcrumb(urlPath)}${raw(rendered)}`, 
+      MARKDOWN_HEAD
+    )
+  );
+}
+
 function serveBinary(req, res, fsPath) {
   const ext = path.extname(fsPath).toLowerCase();
   res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
@@ -266,7 +294,7 @@ async function handler(req, res) {
 
     // Security: two checks prevent escaping the served root.
     // 1) path.resolve normalizes away ".." — reject if result leaves root.
-    const fsPath = path.resolve(path.join(FS_ROOT, urlPath));
+    let fsPath = path.resolve(path.join(FS_ROOT, urlPath));
     if (!fsPath.startsWith(FS_ROOT)) {
       res.writeHead(403);
       res.end('Forbidden');
@@ -300,6 +328,8 @@ async function handler(req, res) {
 
     if (stat.isDirectory()) {
       await serveDirectory(req, res, fsPath, rawUrlPath);
+    } else if (path.extname(fsPath).toLowerCase() === '.md') {
+      await serveMarkdown(req, res, fsPath, rawUrlPath);
     } else if (MIME_TYPES[path.extname(fsPath).toLowerCase()]) {
       serveBinary(req, res, fsPath);
     } else {
@@ -315,6 +345,10 @@ async function handler(req, res) {
 // --- Start ---
 // Listen on 0.0.0.0 (not localhost) so the server is reachable from other
 // devices on the network (e.g. phone via Tailscale).
-http.createServer(handler).listen(port, '0.0.0.0', () => {
-  console.log(`Serving ${FS_ROOT} at http://0.0.0.0:${port}`);
-});
+async function main() {
+  await initHighlighter();
+  http.createServer(handler).listen(port, '0.0.0.0', () => {
+    console.log(`Serving ${FS_ROOT} at http://0.0.0.0:${port}`);
+  });
+}
+main();
