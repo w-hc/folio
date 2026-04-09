@@ -1,21 +1,7 @@
 const { createHighlighter } = require('shiki');
 
-// Shiki loads TextMate grammars (same as VS Code) and must be initialized async.
-// We preload languages at startup so highlightCode can be called synchronously.
-const PRELOADED_LANGS = [
-  'python', 'javascript', 'typescript', 'c', 'cpp', 'bash', 'rust',
-  'json', 'yaml', 'toml', 'sql', 'text',
-];
-
-let highlighter;
-async function initHighlighter() {
-  highlighter = await createHighlighter({
-    themes: ['one-light'],
-    langs: PRELOADED_LANGS,
-  });
-}
-
 // Map file extensions to shiki language names.
+// This is the single source of truth — preloaded languages are derived from it.
 const EXT_TO_LANG = {
   '.py': 'python',
   '.js': 'javascript',
@@ -35,7 +21,20 @@ const EXT_TO_LANG = {
   '.toml': 'toml',
   '.yml': 'yaml',
   '.sql': 'sql',
+  '.html': 'html',
+  '.css': 'css',
 };
+
+// Deduplicate language names from EXT_TO_LANG, plus 'text' as a fallback.
+const PRELOADED_LANGS = [...new Set(Object.values(EXT_TO_LANG)), 'text'];
+
+let highlighter;
+async function initHighlighter() {
+  highlighter = await createHighlighter({
+    themes: ['one-light'],
+    langs: PRELOADED_LANGS,
+  });
+}
 
 // Highlight code as the given language. Returns styled HTML string,
 // or null if the language isn't recognized.
