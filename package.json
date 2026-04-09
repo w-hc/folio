@@ -1,10 +1,26 @@
 {
-  "name": "folio",
+  "name": "folio-serve",
   "version": "1.0.0",
   "description": "A mobile-friendly file browser with Markdown rendering",
   "bin": {
     "folio": "./server.js"
   },
+  "files": [
+    "server.js",
+    "html-engine.js",
+    "markdown-it-renderer.js",
+    "highlight.js"
+  ],
+  "keywords": [
+    "file-browser",
+    "markdown",
+    "katex",
+    "math",
+    "shiki",
+    "syntax-highlighting",
+    "tailscale"
+  ],
+  "license": "MIT",
   "dependencies": {
     "@traptitech/markdown-it-katex": "^3.6.0",
     "katex": "^0.16.11",

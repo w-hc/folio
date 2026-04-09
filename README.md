@@ -7,15 +7,22 @@ Built for one workflow: run it on your laptop, read your notes on your phone. Pa
 ## Install
 
 ```bash
+npm install -g folio-serve
+```
+
+Or clone and link locally:
+
+```bash
 git clone <repo-url>
-cd noteserve
+cd folio
 npm install
+npm link
 ```
 
 ## Usage
 
 ```bash
-node server.js /path/to/your/notes
+folio /path/to/your/notes
 ```
 
 Then open `http://localhost:3000` on any device on your network.
