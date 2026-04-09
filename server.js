@@ -48,6 +48,8 @@ const MIME_TYPES = {
   '.woff2': 'font/woff2',
 };
 
+const UI_COLOR = 'text-indigo-500';
+
 // --- HTML tagged template ---
 //
 // html`<p>${userInput}</p>` auto-escapes interpolated values.
@@ -141,7 +143,7 @@ function page(title, body, extraHead = raw('')) {
     })();
   </script>` : '')}
 </head>
-<body class="max-w-5xl mx-auto p-4 font-mono tracking-tighter">
+<body class="max-w-5xl mx-auto p-4">
   ${body}
 </body>
 </html>`[RAW];
@@ -160,9 +162,14 @@ function breadcrumb(urlPath) {
   let hrefSoFar = '';  // accumulate the links of the prefix segments
   const links = segments.map(seg => {
     hrefSoFar += '/' + encodeURIComponent(seg);
-    return html` / <a class="text-blue-600 no-underline hover:underline" href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
+    return html` / <a class="${UI_COLOR} hover:underline" href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
   });
-  return html`<div class="mb-4 text-gray-500"><a class="text-blue-600 no-underline hover:underline" href="/">root</a>${links}</div>`;
+  return html`
+    <div class="mb-4">
+      <a class="${UI_COLOR} hover:underline" href="/">root</a>
+      ${links}
+    </div>
+  `;
 }
 
 function formatSize(bytes) {
@@ -209,10 +216,18 @@ async function serveDirectory(req, res, fsPath, urlPath) {
   // Hrefs are URL-encoded so they don't need HTML-escaping — wrap in raw() to skip it
   sendHtml(res, page(title, html`
     ${breadcrumb(urlPath)}
-    <ul class="list-none p-0">
-      ${urlPath !== '/' ? html`<li class="py-1"><a class="text-blue-600 no-underline hover:underline" href="../">..</a></li>` : raw('')}
-      ${dirs.map(name => html`<li class="py-1">\u{1F4C1} <a class="text-blue-600 no-underline hover:underline" href="${raw(encodeURIComponent(name) + '/')}">${name}/</a></li>`)}
-      ${fileItems.map(f => html`<li class="py-1"><a class="text-blue-600 no-underline hover:underline" href="${raw(f.href)}">${f.name}</a><span class="text-gray-500 text-sm ml-2">${f.size}</span></li>`)}
+    <ul class="list-none font-mono tracking-tighter space-y-2 ${UI_COLOR}">
+      ${dirs.map(name => html`
+        <li class="hover:underline">
+          \u{1F4C1} <a href="${raw(encodeURIComponent(name) + '/')}">${name}/</a>
+        </li>
+      `)}
+      ${fileItems.map(f => html`
+        <li class="hover:underline">
+          <a href="${raw(f.href)}">${f.name}</a>
+          <span class="text-gray-500 text-sm ml-2">${f.size}</span>
+        </li>
+      `)}
     </ul>
   `));
 }
@@ -228,7 +243,12 @@ async function serveMarkdown(req, res, fsPath, urlPath) {
   sendHtml(
     res, page(
       name,
-      html`${breadcrumb(urlPath)}<article class="prose max-w-none katex-play-nice">${raw(rendered)}</article>`,
+      html`
+        ${breadcrumb(urlPath)}
+        <article class="prose max-w-none katex-play-nice text-base">
+          ${raw(rendered)}
+        </article>
+      `,
       MARKDOWN_HEAD
     )
   );
@@ -252,7 +272,10 @@ async function serveRawText(req, res, fsPath, urlPath) {
       <h2>${name}</h2>
       <p>File is too large to display (${formatSize(stat.size)}).</p>
       <div class="mt-10 text-center">
-        <a class="inline-block px-6 py-3 bg-blue-600 text-white no-underline rounded-md text-base hover:bg-blue-700" href="${raw(urlPath + '?raw=1')}" download>Download file</a>
+        <a class="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+           href="${raw(urlPath + '?raw=1')}" download>
+          Download file
+        </a>
       </div>
     `));
     return;
@@ -264,7 +287,9 @@ async function serveRawText(req, res, fsPath, urlPath) {
 
   sendHtml(res, page(name, html`
     ${breadcrumb(urlPath)}
-    ${highlighted ? raw(highlighted) : html`<pre><code>${content}</code></pre>`}
+    <div class="text-sm my-4 p-4 bg-gray-50 overflow-auto">
+      ${highlighted ? raw(highlighted) : html`<pre><code>${content}</code></pre>`}
+    </div>
   `));
 }
 
