@@ -7,17 +7,18 @@ const { renderMarkdown } = require('./markdown');
 const { initHighlighter, highlightCode, langFromExt } = require('./highlight');
 
 // --- CLI args ---
-const args = process.argv.slice(2);
-let FS_ROOT = '.';
-let port = 3000;
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--port' && args[i + 1]) {
-    port = parseInt(args[i + 1], 10);
-    i++;
-  } else if (!args[i].startsWith('-')) {
-    FS_ROOT = args[i];
-  }
-}
+const { parseArgs } = require('util');
+const { values, positionals } = parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    port: { type: 'string', default: '3000' },
+    dev:  { type: 'boolean', default: false },
+  },
+  allowPositionals: true,
+});
+const port = parseInt(values.port, 10);
+const IS_DEV = values.dev;
+let FS_ROOT = positionals[0] || '.';
 // Use realpath so the root matches what realpath returns for children.
 // On macOS, /tmp → /private/tmp, so without this the security check would
 // reject every file under /tmp.
@@ -25,6 +26,7 @@ FS_ROOT = fs.realpathSync(path.resolve(FS_ROOT));
 
 // --- Constants ---
 const MAX_TEXT_SIZE = 2 * 1024 * 1024; // 2 MB
+const SERVER_ID = Date.now().toString();
 
 const MIME_TYPES = {
   '.pdf': 'application/pdf',
@@ -101,45 +103,14 @@ function html(strings, ...values) {
 
 // --- HTML helpers ---
 
+// Minimal CSS for things Tailwind can't handle (katex overflow, markdown tables).
 const CSS = `
-body {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.6;
-  font-size: 17px;
-  color: #222;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-img { max-width: 100%; height: auto; }
-pre {
-  overflow-x: auto;
-  padding: 12px;
-  background: #f6f8fa;
-  border-radius: 6px;
-  font-size: 14px;
-}
-code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
-.dir-listing { list-style: none; padding: 0; }
-.dir-listing li { padding: 4px 0; }
-.dir-listing a { text-decoration: none; color: #0366d6; }
-.dir-listing a:hover { text-decoration: underline; }
-.breadcrumb { margin-bottom: 16px; color: #586069; }
-.breadcrumb a { color: #0366d6; text-decoration: none; }
-.download-box { margin-top: 40px; text-align: center; }
-.download-box a {
-  display: inline-block; padding: 12px 24px;
-  background: #0366d6; color: #fff; text-decoration: none;
-  border-radius: 6px; font-size: 16px;
-}
-.download-box a:hover { background: #0250a3; }
-.file-size { color: #586069; font-size: 14px; margin-left: 8px; }
-.katex-display { overflow-x: auto; overflow-y: hidden; }
-table { border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }
-th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-th { background: #f6f8fa; }`;
+.katex { font-size: 1.1em !important; }
+.katex-display { margin: 0.05rem 0 !important; overflow-x: auto; overflow-y: hidden; }
+.katex-play-nice .katex { font-weight: inherit; font-style: inherit; text-decoration: inherit; color: inherit; }
+article table { border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }
+article th, article td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+article th { background: #f6f8fa; }`;
 
 // page() returns a plain string (via [RAW]) since it's the outermost call —
 // the HTTP response needs a string, not a raw-wrapped object.
@@ -152,10 +123,25 @@ function page(title, body, extraHead = raw('')) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   ${extraHead}
   <style>${raw(CSS)}</style>
+  ${raw(IS_DEV ? `<script>
+    (function() {
+      var id;
+      setInterval(function() {
+        fetch('/__livereload')
+          .then(function(r) { return r.text(); })
+          .then(function(newId) {
+            if (!id) id = newId;
+            else if (id !== newId) location.reload();
+          })
+          .catch(function() {});
+      }, 300);
+    })();
+  </script>` : '')}
 </head>
-<body>
+<body class="max-w-5xl mx-auto p-4 font-mono tracking-tighter">
   ${body}
 </body>
 </html>`[RAW];
@@ -174,9 +160,9 @@ function breadcrumb(urlPath) {
   let hrefSoFar = '';  // accumulate the links of the prefix segments
   const links = segments.map(seg => {
     hrefSoFar += '/' + encodeURIComponent(seg);
-    return html` / <a href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
+    return html` / <a class="text-blue-600 no-underline hover:underline" href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
   });
-  return html`<div class="breadcrumb"><a href="/">root</a>${links}</div>`;
+  return html`<div class="mb-4 text-gray-500"><a class="text-blue-600 no-underline hover:underline" href="/">root</a>${links}</div>`;
 }
 
 function formatSize(bytes) {
@@ -223,10 +209,10 @@ async function serveDirectory(req, res, fsPath, urlPath) {
   // Hrefs are URL-encoded so they don't need HTML-escaping — wrap in raw() to skip it
   sendHtml(res, page(title, html`
     ${breadcrumb(urlPath)}
-    <ul class="dir-listing">
-      ${urlPath !== '/' ? html`<li><a href="../">..</a></li>` : raw('')}
-      ${dirs.map(name => html`<li>\u{1F4C1} <a href="${raw(encodeURIComponent(name) + '/')}">${name}/</a></li>`)}
-      ${fileItems.map(f => html`<li><a href="${raw(f.href)}">${f.name}</a><span class="file-size">${f.size}</span></li>`)}
+    <ul class="list-none p-0">
+      ${urlPath !== '/' ? html`<li class="py-1"><a class="text-blue-600 no-underline hover:underline" href="../">..</a></li>` : raw('')}
+      ${dirs.map(name => html`<li class="py-1">\u{1F4C1} <a class="text-blue-600 no-underline hover:underline" href="${raw(encodeURIComponent(name) + '/')}">${name}/</a></li>`)}
+      ${fileItems.map(f => html`<li class="py-1"><a class="text-blue-600 no-underline hover:underline" href="${raw(f.href)}">${f.name}</a><span class="text-gray-500 text-sm ml-2">${f.size}</span></li>`)}
     </ul>
   `));
 }
@@ -242,7 +228,7 @@ async function serveMarkdown(req, res, fsPath, urlPath) {
   sendHtml(
     res, page(
       name,
-      html`${breadcrumb(urlPath)}${raw(rendered)}`, 
+      html`${breadcrumb(urlPath)}<article class="prose max-w-none katex-play-nice">${raw(rendered)}</article>`,
       MARKDOWN_HEAD
     )
   );
@@ -265,7 +251,9 @@ async function serveRawText(req, res, fsPath, urlPath) {
       ${breadcrumb(urlPath)}
       <h2>${name}</h2>
       <p>File is too large to display (${formatSize(stat.size)}).</p>
-      <div class="download-box"><a href="${raw(urlPath + '?raw=1')}" download>Download file</a></div>
+      <div class="mt-10 text-center">
+        <a class="inline-block px-6 py-3 bg-blue-600 text-white no-underline rounded-md text-base hover:bg-blue-700" href="${raw(urlPath + '?raw=1')}" download>Download file</a>
+      </div>
     `));
     return;
   }
@@ -294,6 +282,13 @@ function serveRawDownload(req, res, fsPath) {
 async function handler(req, res) {
   try {
     const parsed = new URL(req.url, `http://${req.headers.host}`);
+
+    if (IS_DEV && parsed.pathname === '/__livereload') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end(SERVER_ID);
+      return;
+    }
+
     const urlPath = decodeURIComponent(parsed.pathname);
 
     // Security: two checks prevent escaping the served root.
