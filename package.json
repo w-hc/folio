@@ -1,0 +1,14 @@
+{
+  "name": "noteserve",
+  "version": "1.0.0",
+  "description": "Portable file browser that renders Markdown with KaTeX math support",
+  "bin": {
+    "noteserve": "./server.js"
+  },
+  "dependencies": {
+    "marked": "^15.0.0",
+    "marked-highlight": "^2.2.0",
+    "katex": "^0.16.11",
+    "highlight.js": "^11.11.0"
+  }
+}
