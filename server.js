@@ -3,7 +3,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { initHighlighter, renderMarkdown } = require('./markdown');
+const { renderMarkdown } = require('./markdown');
+const { initHighlighter, highlightCode, langFromExt } = require('./highlight');
 
 // --- CLI args ---
 const args = process.argv.slice(2);
@@ -270,9 +271,12 @@ async function serveRawText(req, res, fsPath, urlPath) {
   }
 
   const content = await fs.promises.readFile(fsPath, 'utf-8');
+  const lang = langFromExt(path.extname(fsPath).toLowerCase());
+  const highlighted = lang ? highlightCode(content, lang) : null;
+
   sendHtml(res, page(name, html`
     ${breadcrumb(urlPath)}
-    <pre><code>${content}</code></pre>
+    ${highlighted ? raw(highlighted) : html`<pre><code>${content}</code></pre>`}
   `));
 }
 

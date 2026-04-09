@@ -1,38 +1,17 @@
 const { marked } = require('marked');
-const { createHighlighter } = require('shiki');
 const katex = require('katex');
+const { highlightCode } = require('./highlight');
 
-// --- Shiki setup ---
-// Shiki loads TextMate grammars (same as VS Code) and must be initialized async.
-// We preload languages at startup so the marked renderer can call codeToHtml
-// synchronously — no need for the broken loadLanguageSync.
-const PRELOADED_LANGS = [
-  'python', 'javascript', 'c', 'cpp', 'bash', 'rust',
-  'json', 'yaml', 'sql', 'text',
-];
-
-let highlighter;
-async function initHighlighter() {
-  highlighter = await createHighlighter({
-    themes: ['one-light'],
-    langs: PRELOADED_LANGS,
-  });
-
-  // Register renderer after highlighter is ready.
-  // Shiki returns fully styled HTML (inline styles), so no external CSS is needed.
-  marked.use({
-    renderer: {
-      code({ text, lang }) {
-        try {
-          return highlighter.codeToHtml(text, { lang: lang || 'python', theme: 'one-light' });
-        } catch {
-          // Language not preloaded — fall back to plain <pre> block
-          return `<pre><code>${text}</code></pre>`;
-        }
-      }
+// Register shiki as the code block renderer for marked.
+// highlightCode is synchronous — the highlighter is initialized before
+// the server starts accepting requests, so it's always ready.
+marked.use({
+  renderer: {
+    code({ text, lang }) {
+      return highlightCode(text, lang || 'python') || `<pre><code>${text}</code></pre>`;
     }
-  });
-}
+  }
+});
 
 // --- Markdown rendering ---
 //
@@ -72,4 +51,4 @@ function renderMarkdown(text) {
   return result;
 }
 
-module.exports = { initHighlighter, renderMarkdown };
+module.exports = { renderMarkdown };
