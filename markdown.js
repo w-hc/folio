@@ -1,6 +1,12 @@
 const { marked } = require('marked');
+const { gfmHeadingId, getHeadingList } = require('marked-gfm-heading-id');
 const katex = require('katex');
 const { highlightCode } = require('./highlight');
+const { html, raw, page, breadcrumb } = require('./html-engine');
+
+// Adds id attributes to headings (e.g. <h2 id="setup">Setup</h2>)
+// and lets us retrieve the heading list for TOC generation.
+marked.use(gfmHeadingId());
 
 // Register shiki as the code block renderer for marked.
 // highlightCode is synchronous — the highlighter is initialized before
@@ -41,6 +47,9 @@ function renderMarkdown(text) {
 
   let result = marked(text);
 
+  // Get heading list (populated by gfmHeadingId during the marked() call above).
+  const headings = getHeadingList();
+
   // Replace placeholders with KaTeX HTML.
   // throwOnError: false renders malformed LaTeX as a red error message instead of crashing.
   for (const [id, { latex, displayMode }] of mathBlocks) {
@@ -48,7 +57,35 @@ function renderMarkdown(text) {
     result = result.replace(id, rendered);
   }
 
-  return result;
+  // Build TOC HTML from headings.
+  let toc = '';
+  if (headings.length > 1) {
+    toc = '<nav><ul>';
+    for (const { level, text: heading, id } of headings) {
+      const indent = (level - 1) * 16;
+      toc += `<li style="margin-left:${indent}px"><a href="#${id}">${heading}</a></li>`;
+    }
+    toc += '</ul></nav>';
+  }
+
+  return { content: result, toc };
 }
 
-module.exports = { renderMarkdown };
+// --- Markdown page ---
+// Dedicated page function with KaTeX CSS, TOC floating button, and overlay.
+
+function markdownPage(title, urlPath, rendered, toc) {
+  return page(
+    title,
+    html`
+      ${breadcrumb(urlPath)}
+      ${raw(toc)}
+      <article class="prose max-w-none katex-play-nice text-base">
+        ${raw(rendered)}
+      </article>
+    `,
+    html`<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">`
+  );
+}
+
+module.exports = { renderMarkdown, markdownPage };
