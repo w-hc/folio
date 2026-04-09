@@ -107,8 +107,8 @@ async function serveDirectory(req, res, fsPath, urlPath) {
 async function serveMarkdown(req, res, fsPath, urlPath) {
   const content = await fs.promises.readFile(fsPath, 'utf-8');
   const name = path.basename(fsPath);
-  const { content: rendered, toc } = renderMarkdown(content);
-  sendHtml(res, markdownPage(name, urlPath, rendered, toc));
+  const { content: rendered, headings } = renderMarkdown(content);
+  sendHtml(res, markdownPage(name, urlPath, rendered, headings));
 }
 
 function serveBinary(req, res, fsPath) {
@@ -205,16 +205,16 @@ async function handler(req, res) {
       return;
     }
 
-    let rawUrlPath = parsed.pathname
+    const encodedPath = parsed.pathname;
 
     if (stat.isDirectory()) {
-      await serveDirectory(req, res, fsPath, rawUrlPath);
+      await serveDirectory(req, res, fsPath, encodedPath);
     } else if (path.extname(fsPath).toLowerCase() === '.md') {
-      await serveMarkdown(req, res, fsPath, rawUrlPath);
+      await serveMarkdown(req, res, fsPath, encodedPath);
     } else if (MIME_TYPES[path.extname(fsPath).toLowerCase()]) {
       serveBinary(req, res, fsPath);
     } else {
-      await serveRawText(req, res, fsPath, rawUrlPath);
+      await serveRawText(req, res, fsPath, encodedPath);
     }
   } catch (err) {
     console.error(err);

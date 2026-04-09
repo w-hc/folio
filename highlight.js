@@ -3,7 +3,7 @@ const { createHighlighter } = require('shiki');
 // Shiki loads TextMate grammars (same as VS Code) and must be initialized async.
 // We preload languages at startup so highlightCode can be called synchronously.
 const PRELOADED_LANGS = [
-  'python', 'javascript', 'c', 'cpp', 'bash', 'rust',
+  'python', 'javascript', 'typescript', 'c', 'cpp', 'bash', 'rust',
   'json', 'yaml', 'toml', 'sql', 'text',
 ];
 

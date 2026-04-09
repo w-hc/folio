@@ -139,7 +139,7 @@ function page(title, body, extraHead = raw('')) {
 }
 
 module.exports = {
-  html, raw, toHtml, escapeHtml, RAW,
+  html, raw, toHtml,
   configure, page, breadcrumb, formatSize,
-  UI_COLOR, CSS,
+  UI_COLOR,
 };
