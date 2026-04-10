@@ -2,7 +2,9 @@
 
 Serve any directory as a browsable website. Markdown files are rendered with LaTeX math and syntax-highlighted code. Everything else is viewable too — code files get syntax highlighting, PDFs and images display natively, and all other files show as plain text.
 
-Built for one workflow: run it on your laptop, read your notes on your phone. Pair it with [Tailscale](https://tailscale.com/) to securely access your files from anywhere without exposing your laptop to the internet.
+Built for one workflow: run it on your laptop, read your notes on your phone. No need for obsidian to sync notes to your phone to read them. 
+
+Pair it with [Tailscale](https://tailscale.com/) to securely access your laptop file server from anywhere without exposing it to the internet. 
 
 ## Install
 
