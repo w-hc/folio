@@ -43,10 +43,10 @@ function markdownPage(title, urlPath, rendered, headings) {
   const hasToc = headings.length > 1;
 
   const tocList = hasToc ? html`
-    <ul class="list-none p-0">
+    <ul class="list-none p-0 overflow-x-auto">
       ${headings.map(({ level, text: heading, id }) => html`
         <li style="margin-left:${String((level - 1) * 16)}px">
-          <a href="${raw('#' + id)}">${heading}</a>
+          <a href="${raw('#' + id)}" class="whitespace-nowrap">${heading}</a>
         </li>
       `)}
     </ul>
