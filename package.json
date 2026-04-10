@@ -20,6 +20,9 @@
     "syntax-highlighting",
     "tailscale"
   ],
+  "scripts": {
+    "dev": "node --watch server.js --dev"
+  },
   "license": "MIT",
   "dependencies": {
     "@traptitech/markdown-it-katex": "^3.6.0",

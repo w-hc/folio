@@ -96,6 +96,11 @@ const CSS = `
 .katex { font-size: 1.1em !important; }
 .katex-display { margin: 0.05rem 0 !important; overflow-x: auto; overflow-y: hidden; }
 .katex-play-nice .katex { font-weight: inherit; font-style: inherit; text-decoration: inherit; color: inherit; }
+/* Tailwind's prose inserts visual backticks around <code> via CSS pseudo-elements.
+   Turn that off — we want styled code, not Markdown-style backtick decoration. */
+.prose code::before, .prose code::after { content: none; }
+/* Only style inline code, not code inside <pre> (shiki code blocks) */
+.prose :not(pre) > code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-weight: normal; }
 article table { border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }
 article th, article td { border: 1px solid #ddd; padding: 8px; text-align: left; }
 article th { background: #f6f8fa; }`;
