@@ -77,7 +77,7 @@ function breadcrumb(urlPath) {
     return html` / <a class="${UI_COLOR} hover:underline" href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
   });
   return html`
-    <div class="mb-4">
+    <div class="mb-4 p-1 sticky top-0 bg-white shadow-sm">
       <a class="${UI_COLOR} hover:underline" href="/">root</a>
       ${links}
     </div>
@@ -137,11 +137,11 @@ function page(title, body, extraHead = raw('')) {
     })();
   </script>` : '')}
 </head>
-<body class="max-w-5xl mx-auto p-4">
+<body class="max-w-5xl mx-auto px-4">
   ${body}
 </body>
 </html>`[RAW];
-}
+}  // px- needed for phone viewing
 
 module.exports = {
   html, raw, toHtml,
