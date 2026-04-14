@@ -29,6 +29,9 @@
     "katex": "^0.16.11",
     "markdown-it": "^14.1.1",
     "markdown-it-anchor": "^9.2.0",
-    "shiki": "^4.0.2"
+    "shiki": "^4.0.2",
+    "tree-sitter-javascript": "^0.25.0",
+    "tree-sitter-python": "^0.25.0",
+    "web-tree-sitter": "^0.26.8"
   }
 }

@@ -143,8 +143,67 @@ function page(title, body, extraHead = raw('')) {
 </html>`[RAW];
 }  // px- needed for phone viewing
 
+// Floating panel with a button in the bottom-right corner.
+// Used for markdown TOC and code outline. Pass the list content as html``.
+// Returns empty if listContent is falsy.
+function floatingPanel(listContent) {
+  if (!listContent) return raw('');
+  return html`
+    <button id="toc-btn"
+      class="fixed bottom-6 right-6 w-12 h-12 bg-gray-800 text-white
+             rounded-full shadow-lg text-xl flex items-center justify-center
+             z-50 hover:bg-gray-700 cursor-pointer">
+      &#8801;
+    </button>
+
+    <div id="toc-overlay"
+      class="fixed inset-0 bg-black/50 z-40 hidden">
+    </div>
+
+    <nav id="toc-panel"
+      class="fixed bottom-0 left-0 right-0 max-h-[70vh] bg-white z-50
+             rounded-t-2xl shadow-2xl p-6 overflow-y-auto
+             translate-y-full transition-transform duration-200">
+      <div class="flex justify-between items-center mb-4">
+        <span class="font-bold text-lg">Outline</span>
+        <button id="toc-close"
+          class="text-2xl text-gray-400 hover:text-gray-600 cursor-pointer">
+          &times;
+        </button>
+      </div>
+      ${listContent}
+    </nav>
+
+    ${raw(`<script>
+      (function() {
+        var btn = document.getElementById('toc-btn');
+        var overlay = document.getElementById('toc-overlay');
+        var panel = document.getElementById('toc-panel');
+        var close = document.getElementById('toc-close');
+
+        function open() {
+          overlay.classList.remove('hidden');
+          panel.classList.remove('translate-y-full');
+        }
+        function shut() {
+          overlay.classList.add('hidden');
+          panel.classList.add('translate-y-full');
+        }
+
+        btn.addEventListener('click', open);
+        overlay.addEventListener('click', shut);
+        close.addEventListener('click', shut);
+
+        panel.querySelectorAll('a').forEach(function(a) {
+          a.addEventListener('click', shut);
+        });
+      })();
+    </script>`)}
+  `;
+}
+
 module.exports = {
   html, raw, toHtml,
-  configure, page, breadcrumb, formatSize,
+  configure, page, breadcrumb, formatSize, floatingPanel,
   UI_COLOR,
 };

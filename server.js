@@ -6,7 +6,8 @@ const path = require('path');
 const { parseArgs } = require('util');
 const { renderMarkdown, markdownPage } = require('./markdown-it-renderer');
 const { initHighlighter, highlightCode, langFromExt } = require('./highlight');
-const { html, raw, configure, page, breadcrumb, formatSize, UI_COLOR } = require('./html-engine');
+const { html, raw, configure, page, breadcrumb, formatSize, floatingPanel, UI_COLOR } = require('./html-engine');
+const { initOutline, extractOutline } = require('./outline');
 
 // --- CLI args ---
 const { values, positionals } = parseArgs({
@@ -139,14 +140,39 @@ async function serveRawText(req, res, fsPath, urlPath) {
   }
 
   const content = await fs.promises.readFile(fsPath, 'utf-8');
-  const lang = langFromExt(path.extname(fsPath).toLowerCase());
-  const highlighted = lang ? highlightCode(content, lang) : null;
+  const ext = path.extname(fsPath).toLowerCase();
+  const lang = langFromExt(ext);
+  let highlighted = lang ? highlightCode(content, lang) : null;
+
+  // Add line-number anchors to shiki output so outline links can jump to lines
+  if (highlighted) {
+    let lineNum = 0;
+    highlighted = highlighted.replace(/<span class="line"/g, () => {
+      lineNum++;
+      return `<span id="L${lineNum}" class="line"`;
+    });
+  }
+
+  // Extract outline (e.g. class/function definitions for Python)
+  const outline = extractOutline(content, ext);
+  const outlineList = outline && outline.length > 0 ? html`
+    <ul class="list-none p-0">
+      ${outline.map(item => html`
+        <li style="margin-left:${String(item.depth * 16)}px">
+          <a href="${raw('#L' + item.line)}">
+            <span class="text-gray-400">${item.type}</span> ${item.name}
+          </a>
+        </li>
+      `)}
+    </ul>
+  ` : null;
 
   sendHtml(res, page(name, html`
     ${breadcrumb(urlPath)}
     <div class="text-sm my-4 p-4 bg-gray-50 overflow-auto">
       ${highlighted ? raw(highlighted) : html`<pre><code>${content}</code></pre>`}
     </div>
+    ${floatingPanel(outlineList)}
   `));
 }
 
@@ -227,7 +253,7 @@ async function handler(req, res) {
 // Listen on 0.0.0.0 (not localhost) so the server is reachable from other
 // devices on the network (e.g. phone via Tailscale).
 async function main() {
-  await initHighlighter();
+  await Promise.all([initHighlighter(), initOutline()]);
   http.createServer(handler).listen(port, '0.0.0.0', () => {
     console.log(`Serving ${FS_ROOT} at http://0.0.0.0:${port}`);
   });
