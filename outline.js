@@ -6,11 +6,14 @@ let langs = {};
 async function initOutline() {
   await Parser.init();
   parser = new Parser();
-  const [python, javascript] = await Promise.all([
+  const tsDir = require.resolve('tree-sitter-typescript/package.json').replace(/\/package\.json$/, '');
+  const [python, javascript, typescript, tsx] = await Promise.all([
     Language.load(require.resolve('tree-sitter-python/tree-sitter-python.wasm')),
     Language.load(require.resolve('tree-sitter-javascript/tree-sitter-javascript.wasm')),
+    Language.load(`${tsDir}/tree-sitter-typescript.wasm`),
+    Language.load(`${tsDir}/tree-sitter-tsx.wasm`),
   ]);
-  langs = { python, javascript };
+  langs = { python, javascript, typescript, tsx };
 }
 
 // --- Python ---
@@ -39,10 +42,13 @@ function extractPythonOutline(code) {
   return walk(tree.rootNode, 0);
 }
 
-// --- JavaScript ---
+// --- JavaScript / TypeScript / JSX / TSX ---
+// These share a core grammar (classes, functions, arrows). TS adds interfaces
+// and type aliases; we surface those if present. Node types not in the current
+// grammar just never match, so one walker handles all four languages.
 
-function extractJSOutline(code) {
-  parser.setLanguage(langs.javascript);
+function extractJSLikeOutline(code, lang) {
+  parser.setLanguage(lang);
   const tree = parser.parse(code);
 
   function walk(node, depth) {
@@ -57,29 +63,22 @@ function extractJSOutline(code) {
         else continue;
       }
 
+      let type = null;
+      let recurseBody = false;
+
       if (child.type === 'class_declaration') {
-        const nameNode = child.childForFieldName('name');
-        const name = nameNode ? nameNode.text : '?';
-        const line = child.startPosition.row + 1;
-        results.push({ type: 'class', name, line, depth });
-        // Recurse into class body for methods
-        const body = child.childForFieldName('body');
-        if (body) results.push(...walk(body, depth + 1));
-
+        type = 'class';
+        recurseBody = true;
       } else if (child.type === 'function_declaration') {
-        const nameNode = child.childForFieldName('name');
-        const name = nameNode ? nameNode.text : '?';
-        const line = child.startPosition.row + 1;
-        results.push({ type: 'function', name, line, depth });
-
+        type = 'function';
       } else if (child.type === 'method_definition') {
-        const nameNode = child.childForFieldName('name');
-        const name = nameNode ? nameNode.text : '?';
-        const line = child.startPosition.row + 1;
-        results.push({ type: 'method', name, line, depth });
-
+        type = 'method';
+      } else if (child.type === 'interface_declaration') {
+        type = 'interface';
+      } else if (child.type === 'type_alias_declaration') {
+        type = 'type';
       } else if (child.type === 'lexical_declaration' || child.type === 'variable_declaration') {
-        // const arrow = (x) => ... or const fn = function() ...
+        // const arrow = (x) => ... or const fn = function () {}
         for (let j = 0; j < child.namedChildCount; j++) {
           const declarator = child.namedChild(j);
           if (declarator.type === 'variable_declarator') {
@@ -92,6 +91,19 @@ function extractJSOutline(code) {
             }
           }
         }
+        continue;
+      } else {
+        continue;
+      }
+
+      const nameNode = child.childForFieldName('name');
+      const name = nameNode ? nameNode.text : '?';
+      const line = child.startPosition.row + 1;
+      results.push({ type, name, line, depth });
+
+      if (recurseBody) {
+        const body = child.childForFieldName('body');
+        if (body) results.push(...walk(body, depth + 1));
       }
     }
     return results;
@@ -103,9 +115,12 @@ function extractJSOutline(code) {
 // --- Dispatch ---
 
 const EXT_TO_EXTRACTOR = {
-  '.py': extractPythonOutline,
-  '.js': extractJSOutline,
-  '.mjs': extractJSOutline,
+  '.py':  (code) => extractPythonOutline(code),
+  '.js':  (code) => extractJSLikeOutline(code, langs.javascript),
+  '.mjs': (code) => extractJSLikeOutline(code, langs.javascript),
+  '.jsx': (code) => extractJSLikeOutline(code, langs.javascript),
+  '.ts':  (code) => extractJSLikeOutline(code, langs.typescript),
+  '.tsx': (code) => extractJSLikeOutline(code, langs.tsx),
 };
 
 // Returns an outline for supported file types, or null if unsupported.
