@@ -89,19 +89,21 @@ async function serveDirectory(req, res, fsPath, urlPath) {
   // Hrefs are URL-encoded so they don't need HTML-escaping — wrap in raw() to skip it
   sendHtml(res, page(title, html`
     ${breadcrumb(urlPath)}
-    <ul class="list-none font-mono tracking-tighter space-y-2 ${UI_COLOR}">
-      ${dirs.map(name => html`
-        <li class="hover:underline">
-          \u{1F4C1} <a href="${raw(encodeURIComponent(name) + '/')}">${name}/</a>
-        </li>
-      `)}
-      ${fileItems.map(f => html`
-        <li class="hover:underline">
-          <a href="${raw(f.href)}">${f.name}</a>
-          <span class="text-gray-500 text-sm ml-2">${f.size}</span>
-        </li>
-      `)}
-    </ul>
+    <div class="overflow-x-auto">
+      <ul class="list-none font-mono tracking-tighter min-w-max ${UI_COLOR}">
+        ${dirs.map(name => html`
+          <li class="hover:underline rounded-md px-1 py-0.5 odd:bg-gray-100 even:bg-white whitespace-nowrap">
+            \u{1F4C1} <a href="${raw(encodeURIComponent(name) + '/')}">${name}/</a>
+          </li>
+        `)}
+        ${fileItems.map(f => html`
+          <li class="hover:underline rounded-md px-1 py-0.5 odd:bg-gray-100 even:bg-white whitespace-nowrap">
+            <a href="${raw(f.href)}">${f.name}</a>
+            <span class="text-gray-500 text-sm ml-2">${f.size}</span>
+          </li>
+        `)}
+      </ul>
+    </div>
   `));
 }
 

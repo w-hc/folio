@@ -74,11 +74,11 @@ function breadcrumb(urlPath) {
   let hrefSoFar = '';  // accumulate the links of the prefix segments
   const links = segments.map(seg => {
     hrefSoFar += '/' + encodeURIComponent(seg);
-    return html` / <a class="${UI_COLOR} hover:underline" href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
+    return html` / <a class="${UI_COLOR} hover:underline mx-1 " href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
   });
   return html`
     <div class="mb-4 p-1 sticky top-0 bg-white shadow-sm">
-      <a class="${UI_COLOR} hover:underline" href="/">root</a>
+      <a class="${UI_COLOR} hover:underline mr-1" href="/">root</a>
       ${links}
     </div>
   `;
