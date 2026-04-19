@@ -6,7 +6,7 @@ const path = require('path');
 const { parseArgs } = require('util');
 const { renderMarkdown, markdownPage } = require('./markdown-it-renderer');
 const { initHighlighter, highlightCode, langFromExt } = require('./highlight');
-const { html, raw, configure, page, breadcrumb, formatSize, floatingPanel, UI_COLOR } = require('./html-engine');
+const { html, raw, configure, page, breadcrumb, formatSize, formatMtime, floatingPanel, UI_COLOR } = require('./html-engine');
 const { initOutline, extractOutline } = require('./outline');
 
 // --- CLI args ---
@@ -72,37 +72,56 @@ async function serveDirectory(req, res, fsPath, urlPath) {
   }
 
   const entries = await fs.promises.readdir(fsPath, { withFileTypes: true });
-  const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
-  const files = entries.filter(e => !e.isDirectory()).map(e => e.name).sort();
 
-  // Stat each file for size display
-  const fileItems = await Promise.all(files.map(async name => {
+  // Stat every entry for mtime (and size for files)
+  const items = await Promise.all(entries.map(async entry => {
+    const name = entry.name;
+    const isDir = entry.isDirectory();
+    let mtime = null;
     let size = '';
     try {
       const stat = await fs.promises.stat(path.join(fsPath, name));
-      size = formatSize(stat.size);
+      mtime = stat.mtime;
+      if (!isDir) size = formatSize(stat.size);
     } catch { /* ignore */ }
-    return { name, href: encodeURIComponent(name), size };
+    return {
+      name,
+      href: encodeURIComponent(name),
+      isDir,
+      mtime,
+      mtimeStr: mtime ? formatMtime(mtime) : '',
+      size,
+    };
   }));
+
+  // Sort dirs and files separately, latest modified first
+  const byMtimeDesc = (a, b) => (b.mtime?.getTime() || 0) - (a.mtime?.getTime() || 0);
+  const dirs = items.filter(i => i.isDir).sort(byMtimeDesc);
+  const files = items.filter(i => !i.isDir).sort(byMtimeDesc);
 
   const title = urlPath === '/' ? 'root' : path.basename(fsPath);
   // Hrefs are URL-encoded so they don't need HTML-escaping — wrap in raw() to skip it
   sendHtml(res, page(title, html`
     ${breadcrumb(urlPath)}
     <div class="overflow-x-auto">
-      <ul class="list-none font-mono tracking-tighter min-w-max ${UI_COLOR}">
-        ${dirs.map(name => html`
-          <li class="hover:underline rounded-md px-1 py-0.5 odd:bg-gray-100 even:bg-white whitespace-nowrap">
-            \u{1F4C1} <a href="${raw(encodeURIComponent(name) + '/')}">${name}/</a>
-          </li>
-        `)}
-        ${fileItems.map(f => html`
-          <li class="hover:underline rounded-md px-1 py-0.5 odd:bg-gray-100 even:bg-white whitespace-nowrap">
-            <a href="${raw(f.href)}">${f.name}</a>
-            <span class="text-gray-500 text-sm ml-2">${f.size}</span>
-          </li>
-        `)}
-      </ul>
+      <table class="font-mono tracking-tighter w-full min-w-max border-collapse ${UI_COLOR}">
+        <tbody>
+          ${dirs.map(d => html`
+            <tr class="odd:bg-gray-100 even:bg-white hover:underline whitespace-nowrap">
+              <td class="px-1 py-0.5">\u{1F4C1} <a href="${raw(d.href + '/')}">${d.name}/</a></td>
+              <td class="px-2 text-gray-500 text-sm text-right"></td>
+              <td class="px-2 text-gray-500 text-sm">${d.mtimeStr}</td>
+            </tr>
+          `)}
+          ${files.map(f => html`
+            <tr class="odd:bg-gray-100 even:bg-white hover:underline whitespace-nowrap">
+              <td class="px-1 py-0.5"><a href="${raw(f.href)}">${f.name}</a></td>
+              <td class="px-2 text-gray-500 text-sm text-right">${f.size}</td>
+              <td class="px-2 text-gray-500 text-sm">${f.mtimeStr}</td>
+            </tr>
+          `)}
+        </tbody>
+      </table>
     </div>
   `));
 }

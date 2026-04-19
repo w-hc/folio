@@ -91,6 +91,18 @@ function formatSize(bytes) {
   return (i === 0 ? bytes : bytes.toFixed(1)) + ' ' + units[i];
 }
 
+// Format a Date as YY_MMDD_HHMM_SS (e.g. 26_0418_2024_14)
+function formatMtime(date) {
+  const p = (n) => String(n).padStart(2, '0');
+  const yy = p(date.getFullYear() % 100);
+  const mm = p(date.getMonth() + 1);
+  const dd = p(date.getDate());
+  const hh = p(date.getHours());
+  const mi = p(date.getMinutes());
+  const ss = p(date.getSeconds());
+  return `${yy}_${mm}${dd}_${hh}${mi}_${ss}`;
+}
+
 // Minimal CSS for things Tailwind can't handle.
 const CSS = `
 .katex { font-size: 1.1em !important; }
@@ -204,6 +216,6 @@ function floatingPanel(listContent) {
 
 module.exports = {
   html, raw, toHtml,
-  configure, page, breadcrumb, formatSize, floatingPanel,
+  configure, page, breadcrumb, formatSize, formatMtime, floatingPanel,
   UI_COLOR,
 };
