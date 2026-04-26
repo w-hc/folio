@@ -9,7 +9,9 @@
     "server.js",
     "html-engine.js",
     "markdown-it-renderer.js",
-    "highlight.js"
+    "highlight.js",
+    "outline.js",
+    "dist.css"
   ],
   "keywords": [
     "file-browser",
@@ -21,7 +23,9 @@
     "tailscale"
   ],
   "scripts": {
-    "dev": "node --watch server.js --dev"
+    "build": "tailwindcss -i input.css -o dist.css --minify",
+    "dev": "concurrently -P -k \"node --watch server.js --dev {@}\" \"tailwindcss -i input.css -o dist.css --watch\" --",
+    "prepublishOnly": "npm run build"
   },
   "license": "MIT",
   "dependencies": {
@@ -34,5 +38,11 @@
     "tree-sitter-python": "^0.25.0",
     "tree-sitter-typescript": "^0.23.2",
     "web-tree-sitter": "^0.26.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "@tailwindcss/typography": "^0.5.19",
+    "concurrently": "^9.2.1",
+    "tailwindcss": "^4.2.4"
   }
 }

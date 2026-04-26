@@ -218,6 +218,13 @@ async function handler(req, res) {
       return;
     }
 
+    // Serve the Tailwind-built stylesheet bundled with the package
+    if (parsed.pathname === '/__folio.css') {
+      res.writeHead(200, { 'Content-Type': 'text/css; charset=utf-8' });
+      fs.createReadStream(path.join(__dirname, 'dist.css')).pipe(res);
+      return;
+    }
+
     const urlPath = decodeURIComponent(parsed.pathname);
 
     // Security: two checks prevent escaping the served root.

@@ -76,8 +76,10 @@ function breadcrumb(urlPath) {
     hrefSoFar += '/' + encodeURIComponent(seg);
     return html` / <a class="${UI_COLOR} hover:underline mx-1 " href="${raw(hrefSoFar)}">${decodeURIComponent(seg)}</a>`;
   });
+
+  // without z-index, katex math renders above the breadcrumb. strange how katex behaves. 
   return html`
-    <div class="mb-4 p-1 sticky top-0 bg-white shadow-sm">
+    <div class="mb-4 p-1 sticky top-0 z-100 bg-white shadow-sm">
       <a class="${UI_COLOR} hover:underline mr-1" href="/">root</a>
       ${links}
     </div>
@@ -103,20 +105,6 @@ function formatMtime(date) {
   return `${yy}_${mm}${dd}_${hh}${mi}_${ss}`;
 }
 
-// Minimal CSS for things Tailwind can't handle.
-const CSS = `
-.katex { font-size: 1.1em !important; }
-.katex-display { margin: 0.05rem 0 !important; overflow-x: auto; overflow-y: hidden; }
-.katex-play-nice .katex { font-weight: inherit; font-style: inherit; text-decoration: inherit; color: inherit; }
-/* Tailwind's prose inserts visual backticks around <code> via CSS pseudo-elements.
-   Turn that off — we want styled code, not Markdown-style backtick decoration. */
-.prose code::before, .prose code::after { content: none; }
-/* Only style inline code, not code inside <pre> (shiki code blocks) */
-.prose :not(pre) > code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-weight: normal; }
-article table { border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }
-article th, article td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-article th { background: #f6f8fa; }`;
-
 // Set once at startup by server.js via configure().
 let IS_DEV = false;
 
@@ -131,9 +119,8 @@ function page(title, body, extraHead = raw('')) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
-  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <link rel="stylesheet" href="/__folio.css">
   ${extraHead}
-  <style>${raw(CSS)}</style>
   ${raw(IS_DEV ? `<script>
     (function() {
       var id;

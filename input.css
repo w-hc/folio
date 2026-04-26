@@ -1,0 +1,35 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* --- Custom CSS that's hard to express as Tailwind utilities --- */
+
+/* KaTeX default 1.21em is too large next to body text */
+.katex { font-size: 1.1em !important; }
+
+/* Default 1em margin between display equations is too much */
+.katex-display { margin: 0.05rem 0 !important; overflow-x: auto; overflow-y: hidden; }
+
+/* Let inline math inherit bold/italic/color from surrounding text */
+.katex-play-nice .katex {
+  font-weight: inherit;
+  font-style: inherit;
+  text-decoration: inherit;
+  color: inherit;
+}
+
+/* Tailwind's prose inserts visual backticks around <code> via CSS pseudo-elements.
+   Turn that off — we want styled code, not Markdown-style backtick decoration. */
+.prose code::before, .prose code::after { content: none; }
+
+/* style inline code; avoid modifying code inside <pre> (shiki code blocks) */
+.prose :not(pre) > code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: normal;
+}
+
+/* Markdown tables (inside <article>) */
+article table { border-collapse: collapse; width: 100%; overflow-x: auto; display: block; }
+article th, article td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+article th { background: #f6f8fa; }
